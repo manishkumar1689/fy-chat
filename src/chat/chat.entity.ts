@@ -9,17 +9,17 @@ export class Chat {
   @prop({
     required: [true, 'Sender is required'],
   })
-  sender: string;
+  from: string;
 
   @prop({
     required: [true, 'Recipient is required'],
   })
-  recipient: string;
+  to: string;
 
   @prop({
     required: [true, 'Time is required'],
   })
-  time: string;
+  time: number;
 
   constructor(chat?: Partial<Chat>) {
     Object.assign(this, chat);

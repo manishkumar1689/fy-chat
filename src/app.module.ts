@@ -4,16 +4,13 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ChatModule } from './chat/chat.module';
 import { mongo } from './.config';
-
+console.log(`mongodb://${mongo.user}:${mongo.pass}@${mongo.host}:${mongo.port}/${mongo.name}`)
 @Module({
   imports: [
     TypegooseModule.forRoot(
-      `mongodb+srv://${mongo.user}:${mongo.pass}@localhost/${mongo.name}?retryWrites=true&w=majority`,
-      {
-        connectionName: 'fychat',
-      },
+      `mongodb://${mongo.user}:${mongo.pass}@${mongo.host}:${mongo.port}/${mongo.name}?retryWrites=true&w=majority`
     ),
-    ChatModule,
+    ChatModule
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -3,12 +3,11 @@ import { ReturnModelType } from '@typegoose/typegoose';
 import { InjectModel } from 'nestjs-typegoose';
 import { Chat } from './chat.entity';
 /* import { defaultApp } from '../auth/firebase-admin'; */
-import { Model } from 'mongoose';
 
 @Injectable()
 export class ChatService {
   constructor(
-    @InjectModel(Chat) private readonly chatModel: Model<Chat>,
+    @InjectModel(Chat) private readonly chatModel: ReturnModelType<typeof Chat>,
   ) { }
 
   private allUsers = [];
@@ -19,8 +18,7 @@ export class ChatService {
   }
 
   async saveChat(chat: Chat): Promise<void> {
-    const createdChat = new this.chatModel(chat);
-    await createdChat.save();
+    await this.chatModel.create(chat);
   }
 
   userConnected(userName: string, registrationToken: string) {

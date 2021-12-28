@@ -4,6 +4,8 @@ export const mongo = {
     name: 'findingyouchat',
     user: 'startrekker',
     pass: 'e2pYiAh9d_2Gn',
+    port: '27017',
+    host: 'localhost'
 }
 
 export const firebaseAccount = {
@@ -11,8 +13,8 @@ export const firebaseAccount = {
     "project_id": "",
     "private_key_id": "",
     "private_key": "",
-    "client_email": "",
-    "client_id": "",
+    "client_email": "findingyou-1ef9a@appspot.gserviceaccount.com",
+    "client_id": "104523399940914594048",
     "auth_uri": "",
     "token_uri": "",
     "auth_provider_x509_cert_url": "",
