@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ReturnModelType } from '@typegoose/typegoose';
 import { InjectModel } from 'nestjs-typegoose';
 import { Chat } from './chat.entity';
-import { defaultApp } from '../auth/firebase-admin';
+/* import { defaultApp } from '../auth/firebase-admin'; */
 import { Model } from 'mongoose';
 
 @Injectable()
@@ -44,7 +44,7 @@ export class ChatService {
     console.log("Connected Users", this.connectedUsers);
   }
 
-  async sendMessagesToOfflineUsers(chat: any) {
+  /* async sendMessagesToOfflineUsers(chat: any) {
     var messagePayload = {
       data: {
         type: "CHAT",
@@ -66,6 +66,6 @@ export class ChatService {
     } catch (ex) {
       console.log(JSON.stringify(ex));
     }
-  }
+  } */
 
 }

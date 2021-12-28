@@ -39,6 +39,6 @@ import {
       await this.chatService.saveChat(chat);
       sender.emit('newChat', chat);
       sender.broadcast.emit('newChat', chat);
-      await this.chatService.sendMessagesToOfflineUsers(chat);
+      //await this.chatService.sendMessagesToOfflineUsers(chat);
     }
   }
