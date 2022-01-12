@@ -2,10 +2,22 @@ export const port = 3091;
 
 export const socketIoPort = 5551;
 
+import * as redisStore from 'cache-manager-redis-store';
+
 export const mongo = {
   name: 'findingyouchat',
   user: 'startrekker',
   pass: 'e2pYiAh9d_2Gn',
+  port: '27017',
+  host: 'localhost',
+};
+
+export const fyAPIBaseUri = 'http://localhost:3043';
+
+export const redisOptions = {
+  store: redisStore,
+  host: 'localhost',
+  port: 6379,
 };
 
 export const firebaseAccount = {
