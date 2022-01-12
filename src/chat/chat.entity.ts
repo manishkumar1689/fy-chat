@@ -17,11 +17,17 @@ export class Chat {
   to: string;
 
   @prop({
-    required: [true, 'Time is required'],
+    required: [false, 'added automatically'],
   })
-  time: number;
+  time?: number;
 
   constructor(chat?: Partial<Chat>) {
     Object.assign(this, chat);
+    this.applyTimestamp();
+  }
+
+  applyTimestamp() {
+    this.time = new Date().getTime();
+    return this;
   }
 }
