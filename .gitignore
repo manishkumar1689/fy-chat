@@ -4,6 +4,7 @@
 
 # server-specific config file
 /.config.ts
+/src/.config.ts
 
 # Logs
 logs
