@@ -5,3 +5,8 @@ export interface Message {
   message: string;
   time: number;
 }
+
+export interface ToFrom {
+  to: string;
+  from: string;
+}
