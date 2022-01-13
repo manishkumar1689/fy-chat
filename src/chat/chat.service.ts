@@ -6,7 +6,6 @@ import { AxiosResponse } from 'axios';
 import { Chat } from './chat.entity';
 import { fyAPIBaseUri } from '../.config';
 import { Message } from './interfaces';
-/* import { defaultApp } from '../auth/firebase-admin'; */
 
 @Injectable()
 export class ChatService {
@@ -112,8 +111,7 @@ export class ChatService {
 
   async getUserInfo(userID = '') {
     const uri = ['user', 'basic-by-id', userID].join('/');
-    const user = await this.getResource(uri);
-    return user;
+    return await this.getResource(uri);
   }
 
   /* async redisClient(): Promise<Redis.Redis> {
@@ -146,8 +144,116 @@ export class ChatService {
     filter.set('timestamp', { $gt: fromTs });
     return await this.chatModel
       .find(Object.fromEntries(filter.entries()))
+      .sort({ time: -1 })
       .skip(skip)
       .limit(max);
+  }
+
+  async getUniqueFromAndToInfo(userId = '') {
+    const { fromIds, toIds } = await this.getUniqueFromAndTo(userId);
+    const ids: string[] = [];
+    const from: any[] = [];
+    const to: any[] = [];
+    for (const fromId of fromIds) {
+      const ui = await this.getUserInfo(fromId);
+      ids.push(fromId);
+      if (ui instanceof Object) {
+        const last = await this.fetchLastFromMessage(fromId);
+        const online = this.userMap.has(fromId);
+        const lastMsgTs = await this.fetchLastFromMessageTs(fromId);
+        from.push({ ...ui, last, online, lastMsgTs });
+      }
+    }
+    for (const toId of toIds) {
+      const ui = await this.getUserInfo(toId);
+      if (ids.indexOf(toId) < 0) {
+        ids.push(toId);
+        if (ui instanceof Object) {
+          const last = await this.fetchLastToMessage(toId);
+          const online = this.userMap.has(toId);
+          const lastMsgTs = await this.fetchLastFromMessageTs(toId);
+          to.push({ ...ui, last, online, lastMsgTs });
+        }
+      }
+    }
+    return { from, to };
+  }
+
+  async getUniqueFromAndTo(userId = '') {
+    const filter: Map<string, any> = new Map();
+    if (isValidObjectId(userId)) {
+      filter.set('$or', [{ to: userId }, { from: userId }]);
+    }
+    const matchStep = {
+      $match: Object.fromEntries(filter.entries()),
+    };
+    const fromGroup = {
+      $group: {
+        _id: '$from',
+      },
+    };
+    const fromIds = await this.chatModel.aggregate([matchStep, fromGroup]);
+    const toGroup = {
+      $group: {
+        _id: '$to',
+      },
+    };
+    const toIds = await this.chatModel.aggregate([matchStep, toGroup]);
+    const filterMapToFrom = (rows: any[]) => {
+      return rows instanceof Array
+        ? rows
+            .filter((row) => row instanceof Object && row._id !== userId)
+            .map((row) => row._id)
+        : [];
+    };
+    return {
+      fromIds: filterMapToFrom(fromIds),
+      toIds: filterMapToFrom(toIds),
+    };
+  }
+
+  async fetchLastFromMessage(userId = '') {
+    const filter: Map<string, any> = new Map();
+    if (isValidObjectId(userId)) {
+      filter.set('from', userId);
+    }
+    const msgs = await this.chatModel
+      .find(Object.fromEntries(filter.entries()))
+      .select('-_id message time')
+      .sort({ time: -1 })
+      .skip(0)
+      .limit(1);
+    return msgs instanceof Array && msgs.length > 0 ? msgs[0] : {};
+  }
+
+  async fetchLastFromMessageTs(userId = ''): Promise<number> {
+    const filter: Map<string, any> = new Map();
+    if (isValidObjectId(userId)) {
+      filter.set('from', userId);
+    }
+    const msgs = await this.chatModel
+      .find(Object.fromEntries(filter.entries()))
+      .select('-_id time')
+      .sort({ time: -1 })
+      .skip(0)
+      .limit(1);
+    let ts = 0;
+    if (msgs instanceof Array && msgs.length > 0) {
+      ts = msgs[0].time;
+    }
+    return ts;
+  }
+
+  async fetchLastToMessage(userId = '') {
+    const filter: Map<string, any> = new Map();
+    if (isValidObjectId(userId)) {
+      filter.set('to', userId);
+    }
+    await this.chatModel
+      .find(Object.fromEntries(filter.entries()))
+      .sort({ time: -1 })
+      .skip(0)
+      .limit(1);
   }
 
   matchSocketId(userId: string): string {
@@ -168,27 +274,17 @@ export class ChatService {
     this.userMap.delete(userId);
   }
 
-  /* async sendMessagesToOfflineUsers(chat: any) {
-    var messagePayload = {
-      data: {
-        type: "CHAT",
-        title: 'chat',
-        message: chat.message,
-        sender: chat.sender,
-        recipient: chat.recipient,
-        time: chat.time
-      },
-      tokens: []
-    };
-    const userTokens = this.userMap.filter(user => !this.connectedUsers.includes(user.userName)).map(user => { return user.registrationToken });
-    if (userTokens.length == 0) {
-      return;
+  async sendOfflineChatRequest(from = '', to = '') {
+    const uri = ['feedback', 'send-chat-request', from, to].join('/');
+    const result = await this.getResource(uri);
+    if (
+      result instanceof Object &&
+      result.valid &&
+      Object.keys(result).includes('fcm')
+    ) {
+      return result.fcm;
+    } else {
+      return { valid: false };
     }
-    messagePayload.tokens = userTokens;
-    try {
-      await defaultApp.messaging().sendMulticast(messagePayload);
-    } catch (ex) {
-      console.log(JSON.stringify(ex));
-    }
-  } */
+  }
 }

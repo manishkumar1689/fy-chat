@@ -1,0 +1,36 @@
+import { Controller, Get, HttpStatus, Param, Res } from '@nestjs/common';
+import { isValidObjectId } from 'mongoose';
+import { ChatService } from './chat.service';
+
+@Controller()
+export class ChatController {
+  constructor(private readonly chatService: ChatService) {}
+
+  @Get('messages/:userID')
+  async getChats(@Res() res, @Param('userID') userID = '') {
+    const validId = isValidObjectId(userID);
+    const result = validId
+      ? await this.chatService.getOtherUserInfo(userID)
+      : { valid: false };
+    return res.json(result);
+  }
+
+  @Get('info/:userID')
+  async getUserInfo(@Res() res, @Param('userID') userID = '') {
+    const validId = isValidObjectId(userID);
+    const result = validId
+      ? await this.chatService.getUserInfo(userID)
+      : { valid: false, rows: [] };
+    const status = result.valid ? HttpStatus.OK : HttpStatus.NOT_FOUND;
+    return res.status(status).json(result);
+  }
+
+  @Get('unique-ids/:userID')
+  async getUniqueIds(@Res() res, @Param('userID') userID = '') {
+    const validId = isValidObjectId(userID);
+    const result = validId
+      ? await this.chatService.getUniqueFromAndToInfo(userID)
+      : { valid: false, fromIds: [], toIds: [] };
+    return res.json(result);
+  }
+}

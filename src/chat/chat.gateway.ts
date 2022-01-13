@@ -50,6 +50,14 @@ export class ChatGateway implements NestGateway {
             user: userInfo,
           });
         });
+        this.chatService.getUserInfo(toId).then((userInfo) => {
+          socket.to(socket.id).emit('user-info', {
+            to: toId,
+            from: fromId,
+            message: 'User info',
+            user: userInfo,
+          });
+        });
       }
     }
     this.chatService.userConnected(fromId, socket.id);
@@ -82,13 +90,20 @@ export class ChatGateway implements NestGateway {
     const toSocketId = this.chatService.matchSocketId(chat.to);
     if (toSocketId.length > 2) {
       sender.to(toSocketId).emit('chat-message', chat);
+    } else {
+      const fcm = await this.chatService.sendOfflineChatRequest(
+        chat.from,
+        chat.to,
+      );
+      if (fcm.valid) {
+        const socketId = sender.id;
+        sender.to(socketId).emit('chat-request-sent', {
+          to: chat.to,
+          from: chat.from,
+          message: `${fcm} has been notified of your chat message`,
+        });
+      }
     }
-    /* sender.emit('newChat', chat);
-    const { chatId, exists } = this.matchChat(chat, sender);
-    sender.join(chatId);
-    sender.in(chatId).emit('newChat', chat); */
-
-    //await this.chatService.sendMessagesToOfflineUsers(chat);
   }
 
   @Bind(MessageBody(), ConnectedSocket())
