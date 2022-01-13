@@ -71,8 +71,8 @@ export class ChatService {
     };
   }
 
-  async fetchConversation(userID = '', toID = '') {
-    const data = await this.getOtherUserInfo(userID, toID);
+  async fetchConversation(userID = '', toID = '', skip = 0, limit = 100) {
+    const data = await this.getOtherUserInfo(userID, toID, skip, limit);
     if (data instanceof Object && Object.keys('rows')) {
       const { rows } = data;
       if (rows instanceof Array && rows.length > 0) {
@@ -82,12 +82,12 @@ export class ChatService {
     return { valid: false };
   }
 
-  async getOtherUserInfo(userID = '', toID = '') {
+  async getOtherUserInfo(userID = '', toID = '', skip = 0, limit = 100) {
     const inData = {
       userID,
       uids: [],
     };
-    const chats = await this.getChats(userID, toID);
+    const chats = await this.getChats(userID, toID, -1, skip, limit);
     if (chats.length > 0) {
       chats.forEach((row) => {
         if (

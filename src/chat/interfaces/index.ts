@@ -11,3 +11,10 @@ export interface ToFrom {
   to: string;
   from: string;
 }
+
+export interface ToFromNext {
+  to: string;
+  from: string;
+  start: number;
+  limit?: number;
+}

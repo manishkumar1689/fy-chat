@@ -4,6 +4,40 @@ export const isString = (str): boolean =>
 export const notEmptyString = (str, min = 1): boolean =>
   isString(str) && str.length >= min;
 
+const numPattern = `\s*-?\\d+(\\.\\d+)?`;
+
+const numRgx = new RegExp('^' + numPattern);
+
+export const isNumericType = (inval) =>
+  typeof inval === 'number' || inval instanceof Number;
+
+export const isNumber = (inval) => isNumericType(inval) && !isNaN(inval);
+
+export const isNumeric = (inval) => isNumber(inval) || numRgx.test(inval);
+
+export const smartCastNumber = (item: any, defVal = 0, isInt = false) => {
+  let out = defVal;
+
+  if (typeof item === 'string') {
+    if (item.length > 0) {
+      if (/^\s*-?\d+(\.\d+)?\s*/.test(item)) {
+        out = isInt ? parseInt(item, 10) : parseFloat(item);
+      }
+    }
+  } else if (typeof item === 'number') {
+    out = item;
+  }
+  return out;
+};
+
+export const smartCastInt = (item: any, defVal = 0) => {
+  return smartCastNumber(item, defVal, true);
+};
+
+export const smartCastFloat = (item: any, defVal = 0) => {
+  return smartCastNumber(item, defVal, false);
+};
+
 export const uuidToNum = (hex: string): number[] => {
   const parts = [hex.substring(0, 8), hex.substring(8, 16), hex.substring(16)];
   return parts.map((part) => parseInt(part, 16));
