@@ -28,10 +28,14 @@ const options = {
 
 @WebSocketGateway(socketIoPort, options)
 export class ChatGateway implements NestGateway {
+  private initialised = false;
+
   constructor(private chatService: ChatService) {}
 
   afterInit(server: any) {
-    console.log('Init', server.constructor);
+    if (server instanceof Object) {
+      this.initialised = true;
+    }
   }
 
   handleConnection(socket: Socket) {

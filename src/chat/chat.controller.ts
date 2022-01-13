@@ -25,12 +25,26 @@ export class ChatController {
     return res.status(status).json(result);
   }
 
-  @Get('unique-ids/:userID')
+  @Get('unique-users/:userID')
   async getUniqueIds(@Res() res, @Param('userID') userID = '') {
     const validId = isValidObjectId(userID);
     const result = validId
       ? await this.chatService.getUniqueFromAndToInfo(userID)
       : { valid: false, fromIds: [], toIds: [] };
+    return res.json(result);
+  }
+
+  @Get('chat-history/:from/:to')
+  async getChatHistory(
+    @Res() res,
+    @Param('from') from = '',
+    @Param('to') to = '',
+  ) {
+    const validIds = isValidObjectId(from) && isValidObjectId(to);
+    let result: any = { valid: false };
+    if (validIds) {
+      result = await this.chatService.fetchConversation(from, to);
+    }
     return res.json(result);
   }
 }

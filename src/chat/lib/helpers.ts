@@ -1,3 +1,9 @@
+export const isString = (str): boolean =>
+  typeof str === 'string' || str instanceof String;
+
+export const notEmptyString = (str, min = 1): boolean =>
+  isString(str) && str.length >= min;
+
 export const uuidToNum = (hex: string): number[] => {
   const parts = [hex.substring(0, 8), hex.substring(8, 16), hex.substring(16)];
   return parts.map((part) => parseInt(part, 16));

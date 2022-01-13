@@ -6,20 +6,14 @@ import { AxiosResponse } from 'axios';
 import { Chat } from './chat.entity';
 import { fyAPIBaseUri } from '../.config';
 import { Message } from './interfaces';
+import { notEmptyString } from './lib/helpers';
 
 @Injectable()
 export class ChatService {
   constructor(
     @InjectModel(Chat) private readonly chatModel: ReturnModelType<typeof Chat>,
     private http: HttpService,
-  ) {
-    /* this.getOtherUserInfo('6061f78686f34f52da3ef446').then((result) => {
-      console.log(JSON.stringify(result));
-    });
-    this.getUserInfo('6061f78686f34f52da3ef446').then((result) => {
-      console.log(JSON.stringify(result));
-    }); */
-  }
+  ) {}
 
   private userMap: Map<string, string> = new Map();
 
@@ -60,6 +54,14 @@ export class ChatService {
     return result;
   }
 
+  mapMessageItem(chat: Chat, fromId = ''): Message {
+    return {
+      isFrom: fromId === chat.from,
+      message: chat.message,
+      time: chat.time,
+    };
+  }
+
   mapMessage(chat: Chat): Message {
     return {
       to: chat.to,
@@ -69,12 +71,23 @@ export class ChatService {
     };
   }
 
-  async getOtherUserInfo(userID = '') {
+  async fetchConversation(userID = '', toID = '') {
+    const data = await this.getOtherUserInfo(userID, toID);
+    if (data instanceof Object && Object.keys('rows')) {
+      const { rows } = data;
+      if (rows instanceof Array && rows.length > 0) {
+        return { ...rows[0], valid: true };
+      }
+    }
+    return { valid: false };
+  }
+
+  async getOtherUserInfo(userID = '', toID = '') {
     const inData = {
       userID,
       uids: [],
     };
-    const chats = await this.getChats(userID);
+    const chats = await this.getChats(userID, toID);
     if (chats.length > 0) {
       chats.forEach((row) => {
         if (
@@ -97,15 +110,20 @@ export class ChatService {
       inData.uids.length > 0 && isValidObjectId(userID)
         ? await this.postResource('user/basic-by-ids', inData)
         : [];
-    const rows = info.map((item) => {
+    const rows = [];
+    for (const item of info) {
       const itemId = item._id.toString();
-      return {
+      const online = this.userMap.has(item._id);
+      const lastMsgTs = await this.fetchLastFromMessageTs(item._id);
+      rows.push({
         ...item,
+        online,
+        lastMsgTs,
         messages: chats
           .filter((ch) => ch.to === itemId || ch.from === itemId)
-          .map(this.mapMessage),
-      };
-    });
+          .map((ch) => this.mapMessageItem(ch, userID)),
+      });
+    }
     return { rows, valid: rows.length > 0 };
   }
 
@@ -131,22 +149,42 @@ export class ChatService {
 
   async getChats(
     userId = '',
+    toId = '',
     sinceTs = -1,
     skip = 0,
-    max = 10000,
+    max = 100,
   ): Promise<Chat[]> {
     const fromTs =
-      sinceTs > 0 ? new Date().getTime() - 90 * 24 * 60 * 60 * 100 : sinceTs;
+      sinceTs > 0 ? new Date().getTime() - 366 * 24 * 60 * 60 * 100 : sinceTs;
     const filter: Map<string, any> = new Map();
-    if (isValidObjectId(userId)) {
-      filter.set('$or', [{ to: userId }, { from: userId }]);
+    const hasToId = notEmptyString(toId, 12);
+    const validUserId = isValidObjectId(userId);
+    let validFilter = false;
+    if (validUserId) {
+      if (hasToId) {
+        if (isValidObjectId(toId)) {
+          filter.set('$or', [
+            { to: userId, from: toId },
+            { to: toId, from: userId },
+          ]);
+          validFilter = true;
+        }
+      } else {
+        filter.set('$or', [{ to: userId }, { from: userId }]);
+        validFilter = true;
+      }
     }
-    filter.set('timestamp', { $gt: fromTs });
-    return await this.chatModel
-      .find(Object.fromEntries(filter.entries()))
-      .sort({ time: -1 })
-      .skip(skip)
-      .limit(max);
+    let items: any[] = [];
+    if (validFilter) {
+      filter.set('time', { $gt: fromTs });
+      items = await this.chatModel
+        .find(Object.fromEntries(filter.entries()))
+        .select('-_id to from message time')
+        .sort({ time: -1 })
+        .skip(skip)
+        .limit(max);
+    }
+    return items;
   }
 
   async getUniqueFromAndToInfo(userId = '') {
@@ -267,7 +305,7 @@ export class ChatService {
 
   userConnected(userId: string, token: string) {
     this.userMap.set(userId, token);
-    console.log('All Users', this.userMap.entries());
+    //console.log('All Users', this.userMap.entries());
   }
 
   userDisconnected(userId: string) {
