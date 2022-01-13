@@ -76,7 +76,7 @@ export class ChatService {
     if (data instanceof Object && Object.keys('rows')) {
       const { rows } = data;
       if (rows instanceof Array && rows.length > 0) {
-        return { ...rows[0], valid: true };
+        return { ...rows[0], start: skip, limit, valid: true };
       }
     }
     return { valid: false };
@@ -129,7 +129,10 @@ export class ChatService {
 
   async getUserInfo(userID = '') {
     const uri = ['user', 'basic-by-id', userID].join('/');
-    return await this.getResource(uri);
+    const info = await this.getResource(uri);
+    const online = this.userMap.has(userID);
+    const lastMsgTs = await this.fetchLastFromMessageTs(userID);
+    return { ...info, online, lastMsgTs };
   }
 
   /* async redisClient(): Promise<Redis.Redis> {
@@ -197,9 +200,7 @@ export class ChatService {
       ids.push(fromId);
       if (ui instanceof Object) {
         const last = await this.fetchLastFromMessage(fromId);
-        const online = this.userMap.has(fromId);
-        const lastMsgTs = await this.fetchLastFromMessageTs(fromId);
-        from.push({ ...ui, last, online, lastMsgTs });
+        from.push({ ...ui, last });
       }
     }
     for (const toId of toIds) {
@@ -208,9 +209,7 @@ export class ChatService {
         ids.push(toId);
         if (ui instanceof Object) {
           const last = await this.fetchLastToMessage(toId);
-          const online = this.userMap.has(toId);
-          const lastMsgTs = await this.fetchLastFromMessageTs(toId);
-          to.push({ ...ui, last, online, lastMsgTs });
+          to.push({ ...ui, last });
         }
       }
     }
@@ -308,8 +307,9 @@ export class ChatService {
     //console.log('All Users', this.userMap.entries());
   }
 
-  userDisconnected(userId: string) {
+  async userDisconnected(userId: string) {
     this.userMap.delete(userId);
+    return await this.getUniqueFromAndTo(userId);
   }
 
   async sendOfflineChatRequest(from = '', to = '') {
@@ -320,7 +320,9 @@ export class ChatService {
       result.valid &&
       Object.keys(result).includes('fcm')
     ) {
-      return result.fcm;
+      const keys = Object(result.fcm) ? Object.keys(result.fcm) : [];
+      const hasBeenSent = keys.length > 1;
+      return hasBeenSent ? { ...result.fcm, valid: true } : { valid: false };
     } else {
       return { valid: false };
     }

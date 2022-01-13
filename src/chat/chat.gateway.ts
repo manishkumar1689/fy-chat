@@ -18,6 +18,7 @@ import {
 } from './lib/helpers';
 import { isValidObjectId } from 'mongoose';
 import { ToFrom, ToFromNext } from './interfaces';
+import { keys } from './settings/keys';
 
 const options = {
   cors: {
@@ -44,28 +45,30 @@ export class ChatGateway implements NestGateway {
     const fromId = extractStringFromArrayOrString(query.from);
     const toId = extractStringFromArrayOrString(query.to);
     const hasReceiver = isValidObjectId(toId);
+    this.chatService.userConnected(fromId, socket.id);
     if (hasReceiver) {
       const recipientSocketId = this.chatService.matchSocketId(toId);
       if (recipientSocketId.length > 2) {
         this.chatService.getUserInfo(fromId).then((userInfo) => {
-          socket.to(recipientSocketId).emit('user-connected', {
+          socket.to(recipientSocketId).emit(keys.USER_CONNECTED, {
             to: toId,
             from: fromId,
             message: 'New chat request',
             user: userInfo,
           });
         });
-        this.chatService.getUserInfo(toId).then((userInfo) => {
-          socket.to(socket.id).emit('user-info', {
-            to: toId,
-            from: fromId,
-            message: 'User info',
-            user: userInfo,
+        setTimeout(() => {
+          this.chatService.getUserInfo(toId).then((userInfo) => {
+            socket.to(socket.id).emit(keys.USER_INFO, {
+              to: toId,
+              from: fromId,
+              message: 'User info',
+              user: userInfo,
+            });
           });
-        });
+        }, 250);
       }
     }
-    this.chatService.userConnected(fromId, socket.id);
 
     process.nextTick(async () => {
       if (hasReceiver) {
@@ -73,10 +76,10 @@ export class ChatGateway implements NestGateway {
           fromId,
           toId,
         );
-        socket.to(socket.id).emit('conversation-history', convHistory);
+        socket.to(socket.id).emit(keys.CHAT_HISTORY, convHistory);
       } else {
         const chatList = await this.chatService.getUniqueFromAndToInfo(fromId);
-        socket.to(socket.id).emit('chat-list', chatList);
+        socket.to(socket.id).emit(keys.CHAT_LIST, chatList);
       }
     });
   }
@@ -85,17 +88,25 @@ export class ChatGateway implements NestGateway {
     const query = socket.handshake.query;
     const fromId = extractStringFromArrayOrString(query.from);
     if (notEmptyString(fromId, 12)) {
-      this.chatService.userDisconnected(query.from);
+      this.chatService.userDisconnected(query.from).then((result) => {
+        const { fromIds } = result;
+        for (const fromId of fromIds) {
+          const toSocketId = this.chatService.matchSocketId(fromId);
+          if (notEmptyString(toSocketId, 3)) {
+            socket.io(toSocketId).emit(keys.USER_DISCONNECTED, query.from);
+          }
+        }
+      });
     }
   }
 
   @Bind(MessageBody(), ConnectedSocket())
-  @SubscribeMessage('chat')
+  @SubscribeMessage(keys.CHAT)
   async handleNewMessage(chat: Chat, sender: Socket) {
     await this.chatService.saveChat(chat);
     const toSocketId = this.chatService.matchSocketId(chat.to);
     if (toSocketId.length > 2) {
-      sender.to(toSocketId).emit('chat-message', chat);
+      sender.to(toSocketId).emit(keys.CHAT_MESSAGE, chat);
     } else {
       const fcm = await this.chatService.sendOfflineChatRequest(
         chat.from,
@@ -103,7 +114,7 @@ export class ChatGateway implements NestGateway {
       );
       if (fcm.valid) {
         const socketId = sender.id;
-        sender.to(socketId).emit('chat-request-sent', {
+        sender.to(socketId).emit('chat_request_sent', {
           to: chat.to,
           from: chat.from,
           message: `${fcm} has been notified of your chat message`,
@@ -113,18 +124,18 @@ export class ChatGateway implements NestGateway {
   }
 
   @Bind(MessageBody(), ConnectedSocket())
-  @SubscribeMessage('info-request')
+  @SubscribeMessage(keys.INFO_REQUEST)
   async handleInfoRequest(toFrom: ToFrom, sender: Socket) {
     const { to, from } = toFrom;
     const userInfo = await this.chatService.getUserInfo(to);
     const toSocketId = this.chatService.matchSocketId(from);
     if (toSocketId.length > 2) {
-      sender.to(toSocketId).emit('user-info', userInfo);
+      sender.to(toSocketId).emit('user_info', userInfo);
     }
   }
 
   @Bind(MessageBody(), ConnectedSocket())
-  @SubscribeMessage('more-messages')
+  @SubscribeMessage(keys.MORE_MESSAGES)
   async fetchMoreMessages(toFrom: ToFromNext, sender: Socket) {
     const { to, from, start, limit } = toFrom;
     const limitInt = isNumeric(limit) ? smartCastInt(limit, 100) : 100;
@@ -135,11 +146,11 @@ export class ChatGateway implements NestGateway {
       skip,
       limitInt,
     );
-
-    sender.to(sender.id).emit('conversation-history-more', {
+    const messages = history.messages instanceof Array ? history.messages : [];
+    sender.to(sender.id).emit(keys.CHAT_HISTORY_MORE, {
       start: skip,
       limit: limitInt,
-      history,
+      messages,
     });
   }
 }
