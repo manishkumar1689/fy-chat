@@ -12,16 +12,92 @@ export const keys = {
 };
 
 export const keyDefinitions = {
-  CHAT: `send 1-on-1 chat message to the server`,
-  CHAT_MESSAGE: `1-on-1 message sent from server`,
-  USER_CONNECTED: `server notifies the other user that the user has connected`,
-  USER_INFO: `server sends user info about the current user if the _id cannot be mapped to another profile`,
-  CHAT_HISTORY: `sent automatically by the server when starting a new chat`,
-  CHAT_LIST: `list of users with last message and online status`,
-  USER_DISCONNECTED: `Server informs client that a user has disconnected`,
-  INFO_REQUEST: `Information request sent to the server`,
-  MORE_MESSAGES: `ask server for more messages in a conversation`,
-  CHAT_HISTORY_MORE: `server sends back more chat history`,
+  CHAT: {
+    text: `send 1-on-1 chat message to the server`,
+    payload: {
+      to: `string: [USER_ID]`,
+      from: `string: [USER_ID]`,
+      message: `string: text`,
+    },
+  },
+  CHAT_MESSAGE: {
+    text: `1-on-1 message sent from server`,
+    payload: {
+      to: `string: [USER_ID]`,
+      from: `string: [USER_ID]`,
+      message: `string: text`,
+      time: `int [milliseconds since 1970-01-01]`,
+    },
+  },
+  USER_CONNECTED: {
+    text: `server notifies the other user that the user has connected`,
+    payload: {
+      to: `string: [USER_ID]`,
+      from: `string: [USER_ID]`,
+      message: `string: text`,
+      user: {
+        _id: 'string',
+        nickName: 'string',
+        roles: 'string[]',
+        profileImg: 'string: URI',
+      },
+    },
+  },
+  CHAT_HISTORY: {
+    text: `sent automatically by the server when starting a new chat`,
+    payload: {
+      _id: `string`,
+      nickName: 'string',
+      roles: 'string[]',
+      profileImg: 'string: URI',
+      start: `int`,
+      limit: `int`,
+      messages: 'BasicMsg[]',
+    },
+  },
+  MORE_MESSAGES: {
+    text: `ask server for more messages in a conversation`,
+    payload: {
+      to: `string: [USER_ID]`,
+      from: `string: [USER_ID]`,
+      start: `int`,
+      limit: `int`,
+    },
+  },
+  CHAT_HISTORY_MORE: {
+    text: `server sends back more chat history`,
+    payload: {
+      start: `int`,
+      limit: `int`,
+      messages: 'BasicMsg[]',
+    },
+  },
+  CHAT_LIST: {
+    text: `list of users with last message and online status`,
+    payload: {
+      from: `BasicInfo[]`,
+      to: `BasicInfo[]`,
+    },
+  },
+  USER_DISCONNECTED: {
+    text: `Server informs client that a user has disconnected`,
+    payload: `[USER_ID]`,
+  },
+  INFO_REQUEST: {
+    to: {
+      text: `string: [USER_ID] of other person`,
+    },
+    from: `string: your USER_ID`,
+  },
+  USER_INFO: {
+    text: `server sends user info about the current user if the _id cannot be mapped to another profile`,
+    payload: {
+      _id: 'string',
+      nickName: 'string',
+      roles: 'string[]',
+      profileImg: 'string: URI',
+    },
+  },
 };
 
 export const renderKeyDefinitions = () => {
@@ -29,7 +105,7 @@ export const renderKeyDefinitions = () => {
   return Object.entries(keys).map(([k, v]) => {
     const definition = defKeys.includes(k)
       ? keyDefinitions[k]
-      : v.replace(/_/g, ' ');
+      : { text: v.replace(/_/g, ' ') };
     return {
       key: v,
       definition,
