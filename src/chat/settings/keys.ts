@@ -18,7 +18,7 @@ export const keyDefinitions = {
   USER_INFO: `server sends user info about the current user if the _id cannot be mapped to another profile`,
   CHAT_HISTORY: `sent automatically by the server when starting a new chat`,
   CHAT_LIST: `list of users with last message and online status`,
-  USER_DISCONNECTED: 'user_disconnected',
+  USER_DISCONNECTED: `Server informs client that a user has disconnected`,
   INFO_REQUEST: `Information request sent to the server`,
   MORE_MESSAGES: `ask server for more messages in a conversation`,
   CHAT_HISTORY_MORE: `server sends back more chat history`,
@@ -26,13 +26,13 @@ export const keyDefinitions = {
 
 export const renderKeyDefinitions = () => {
   const defKeys = Object.keys(keyDefinitions);
-  return Object.entries(keys).forEach(([k, v]) => {
+  return Object.entries(keys).map(([k, v]) => {
     const definition = defKeys.includes(k)
       ? keyDefinitions[k]
       : v.replace(/_/g, ' ');
     return {
       key: v,
-      description: definition,
+      definition,
     };
   });
 };
