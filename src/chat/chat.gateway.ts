@@ -93,7 +93,7 @@ export class ChatGateway implements NestGateway {
         for (const fromId of fromIds) {
           const toSocketId = this.chatService.matchSocketId(fromId);
           if (notEmptyString(toSocketId, 3)) {
-            socket.io(toSocketId).emit(keys.USER_DISCONNECTED, query.from);
+            socket.to(toSocketId).emit(keys.USER_DISCONNECTED, query.from);
           }
         }
       });
