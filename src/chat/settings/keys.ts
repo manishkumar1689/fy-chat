@@ -100,9 +100,30 @@ export const keyDefinitions = {
   },
 };
 
+const customTypes = {
+  BasicMsg: {
+    isFrom: `boolean: is from the same user`,
+    message: `string`,
+    time: `int`,
+  },
+  BasicInfo: {
+    valid: `boolean: ID matches active user account`,
+    _id: 'string: [USER_ID]',
+    nickName: 'string',
+    roles: `string[]`,
+    profileImg: `string: URI`,
+    online: `boolean`,
+    lastMsgTs: `int`,
+    last: {
+      message: `string`,
+      time: `int`,
+    },
+  },
+};
+
 export const renderKeyDefinitions = () => {
   const defKeys = Object.keys(keyDefinitions);
-  return Object.entries(keys).map(([k, v]) => {
+  const socketKeys = Object.entries(keys).map(([k, v]) => {
     const definition = defKeys.includes(k)
       ? keyDefinitions[k]
       : { text: v.replace(/_/g, ' ') };
@@ -111,4 +132,8 @@ export const renderKeyDefinitions = () => {
       definition,
     };
   });
+  return {
+    socketKeys,
+    customTypes,
+  };
 };

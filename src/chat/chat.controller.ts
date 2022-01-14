@@ -49,8 +49,8 @@ export class ChatController {
     return res.json(result);
   }
 
-  @Get('keys')
-  async getKeys(@Res() res) {
+  @Get('socket-info')
+  async getKeyInfo(@Res() res) {
     const data = renderKeyDefinitions();
     return res.json(data);
   }
