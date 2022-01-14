@@ -59,7 +59,8 @@ export class ChatGateway implements NestGateway {
         });
         setTimeout(() => {
           this.chatService.getUserInfo(toId).then((userInfo) => {
-            socket.to(socket.id).emit(keys.USER_INFO, {
+            const socketId = this.chatService.matchSocketId(fromId);
+            socket.to(socketId).emit(keys.USER_INFO, {
               to: toId,
               from: fromId,
               message: 'User info',
@@ -71,15 +72,16 @@ export class ChatGateway implements NestGateway {
     }
 
     process.nextTick(async () => {
+      const socketId = this.chatService.matchSocketId(fromId);
       if (hasReceiver) {
         const convHistory = await this.chatService.fetchConversation(
           fromId,
           toId,
         );
-        socket.to(socket.id).emit(keys.CHAT_HISTORY, convHistory);
+        socket.to(socketId).emit(keys.CHAT_HISTORY, convHistory);
       } else {
         const chatList = await this.chatService.getUniqueFromAndToInfo(fromId);
-        socket.to(socket.id).emit(keys.CHAT_LIST, chatList);
+        socket.to(socketId).emit(keys.CHAT_LIST, chatList);
       }
     });
   }
@@ -128,10 +130,9 @@ export class ChatGateway implements NestGateway {
   async handleInfoRequest(toFrom: ToFrom, sender: Socket) {
     const { to, from } = toFrom;
     const userInfo = await this.chatService.getUserInfo(to);
-    const toSocketId = this.chatService.matchSocketId(from);
-    if (toSocketId.length > 2) {
-      sender.to(toSocketId).emit('user_info', userInfo);
-    }
+    ///const toSocketId = this.chatService.matchSocketId(to);
+    const fromSocketId = this.chatService.matchSocketId(from);
+    sender.to(fromSocketId).emit(keys.USER_INFO, userInfo);
   }
 
   @Bind(MessageBody(), ConnectedSocket())
