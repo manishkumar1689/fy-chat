@@ -1,6 +1,7 @@
 import { Controller, Get, HttpStatus, Param, Res } from '@nestjs/common';
 import { isValidObjectId } from 'mongoose';
 import { ChatService } from './chat.service';
+import { renderKeyDefinitions } from './settings/keys';
 
 @Controller()
 export class ChatController {
@@ -46,5 +47,11 @@ export class ChatController {
       result = await this.chatService.fetchConversation(from, to);
     }
     return res.json(result);
+  }
+
+  @Get('keys')
+  async getKeys(@Res() res) {
+    const data = renderKeyDefinitions();
+    return res.json(data);
   }
 }
