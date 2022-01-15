@@ -9,7 +9,7 @@ import { ChatService } from './chat.service';
 import { Bind } from '@nestjs/common';
 import { Chat } from './chat.entity';
 import { socketIoPort } from '../.config';
-import { Socket } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import {
   extractStringFromArrayOrString,
   isNumeric,
@@ -26,6 +26,7 @@ const options = {
     methods: ['GET', 'POST'],
     credentials: true,
   },
+  allowEIO3: true,
 };
 
 @WebSocketGateway(socketIoPort, options)
