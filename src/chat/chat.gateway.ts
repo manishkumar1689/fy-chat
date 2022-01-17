@@ -9,7 +9,7 @@ import { ChatService } from './chat.service';
 import { Bind } from '@nestjs/common';
 import { Chat } from './chat.entity';
 import { socketIoPort } from '../.config';
-import { Server, Socket } from 'socket.io';
+import { Socket } from 'socket.io';
 import {
   extractStringFromArrayOrString,
   isNumeric,
@@ -73,17 +73,37 @@ export class ChatGateway implements NestGateway {
     }
 
     process.nextTick(async () => {
-      const socketId = this.chatService.matchSocketId(fromId);
-      if (hasReceiver) {
-        const convHistory = await this.chatService.fetchConversation(
-          fromId,
-          toId,
-        );
-        socket.to(socketId).emit(keys.CHAT_HISTORY, convHistory);
-      } else {
-        const chatList = await this.chatService.getUniqueFromAndToInfo(fromId);
-        socket.to(socketId).emit(keys.CHAT_LIST, chatList);
-      }
+      setTimeout(async () => {
+        const socketId = this.chatService.matchSocketId(fromId);
+        if (hasReceiver) {
+          const convHistory = await this.chatService.fetchConversation(
+            fromId,
+            toId,
+          );
+          socket.to(socketId).emit(keys.CHAT_HISTORY, convHistory);
+        } else {
+          const chatList = await this.chatService.getUniqueFromAndToInfo(
+            fromId,
+          );
+          socket.to(socketId).emit(keys.CHAT_LIST, chatList);
+          if (chatList.from.length > 0) {
+            chatList.from.forEach((row) => {
+              if (row._id !== toId) {
+                const otherSocketId = this.chatService.matchSocketId(row._id);
+                if (otherSocketId.length > 2) {
+                  socket.to(otherSocketId).emit(keys.USER_CONNECTED, {
+                    to: row._id,
+                    from: fromId,
+                    message: 'New chat request',
+                    user: row,
+                  });
+                }
+              }
+            });
+          }
+          /* console.log(keys.CHAT_LIST, chatList); */
+        }
+      }, 500);
     });
   }
 
@@ -134,6 +154,15 @@ export class ChatGateway implements NestGateway {
     ///const toSocketId = this.chatService.matchSocketId(to);
     const fromSocketId = this.chatService.matchSocketId(from);
     sender.to(fromSocketId).emit(keys.USER_INFO, userInfo);
+    /* console.log(fromSocketId); */
+  }
+
+  @Bind(MessageBody(), ConnectedSocket())
+  @SubscribeMessage(keys.IS_TYPING)
+  async handleIsTyping(toFrom: ToFrom, sender: Socket) {
+    const { to, from } = toFrom;
+    const toSocketId = this.chatService.matchSocketId(to);
+    sender.to(toSocketId).emit(keys.IS_TYPING_RESPONSE, from);
   }
 
   @Bind(MessageBody(), ConnectedSocket())

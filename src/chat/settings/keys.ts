@@ -6,6 +6,8 @@ export const keys = {
   CHAT_HISTORY: 'chat_history', // sent automatically by the server when starting a new chat
   CHAT_LIST: 'chat_list', // list of users with last message and online status
   USER_DISCONNECTED: 'user_disconnected',
+  IS_TYPING: 'is_typing',
+  IS_TYPING_RESPONSE: 'is_typing',
   INFO_REQUEST: 'info_request',
   MORE_MESSAGES: 'more_messages', // ask server for more messages in a conversation
   CHAT_HISTORY_MORE: 'chat_history_more', // server sends back more chat history
@@ -83,10 +85,20 @@ export const keyDefinitions = {
     text: `Server informs client that a user has disconnected`,
     payload: `[USER_ID]`,
   },
-  INFO_REQUEST: {
-    to: {
-      text: `string: [USER_ID] of other person`,
+  IS_TYPING: {
+    text: `Tell server the other user is typing`,
+    payload: {
+      from: `string [USER_ID]`,
+      to: `string [USER_ID]`,
     },
+  },
+  IS_TYPING_RESPONSE: {
+    text: `Tell client the other user is typing`,
+    payload: `string [USER_ID]`,
+  },
+  INFO_REQUEST: {
+    text: `string: [USER_ID] of other person`,
+    to: {},
     from: `string: your USER_ID`,
   },
   USER_INFO: {
