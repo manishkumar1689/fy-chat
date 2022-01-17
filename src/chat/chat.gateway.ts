@@ -61,7 +61,7 @@ export class ChatGateway implements NestGateway {
         setTimeout(() => {
           this.chatService.getUserInfo(toId).then((userInfo) => {
             const socketId = this.chatService.matchSocketId(fromId);
-            socket.to(socketId).emit(keys.USER_INFO, {
+            socket.to(socketId).emit(keys.USER_CONNECTED, {
               to: toId,
               from: fromId,
               message: 'User info',
