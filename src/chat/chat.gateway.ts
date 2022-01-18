@@ -19,6 +19,7 @@ import {
 import { isValidObjectId } from 'mongoose';
 import { ToFrom, ToFromNext } from './interfaces';
 import { keys } from './settings/keys';
+import { ChatNotification } from './models/chat-notification';
 
 const options = {
   cors: {
@@ -51,21 +52,21 @@ export class ChatGateway implements NestGateway {
       const recipientSocketId = this.chatService.matchSocketId(toId);
       if (recipientSocketId.length > 2) {
         this.chatService.getUserInfo(fromId).then((userInfo) => {
-          socket.to(recipientSocketId).emit(keys.USER_CONNECTED, {
+          this.sendChatData(socket, recipientSocketId, keys.USER_CONNECTED, {
             to: toId,
             from: fromId,
             message: 'New chat request',
-            user: userInfo,
+            ...userInfo,
           });
         });
         setTimeout(() => {
           this.chatService.getUserInfo(toId).then((userInfo) => {
             const socketId = this.chatService.matchSocketId(fromId);
-            socket.to(socketId).emit(keys.USER_CONNECTED, {
+            this.sendChatData(socket, socketId, keys.USER_INFO, {
               to: toId,
               from: fromId,
               message: 'User info',
-              user: userInfo,
+              ...userInfo,
             });
           });
         }, 250);
@@ -73,37 +74,46 @@ export class ChatGateway implements NestGateway {
     }
 
     process.nextTick(async () => {
-      setTimeout(async () => {
-        const socketId = this.chatService.matchSocketId(fromId);
-        if (hasReceiver) {
-          const convHistory = await this.chatService.fetchConversation(
-            fromId,
-            toId,
-          );
-          socket.to(socketId).emit(keys.CHAT_HISTORY, convHistory);
-        } else {
-          const chatList = await this.chatService.getUniqueFromAndToInfo(
-            fromId,
-          );
-          socket.to(socketId).emit(keys.CHAT_LIST, chatList);
-          if (chatList.from.length > 0) {
-            chatList.from.forEach((row) => {
-              if (row._id !== toId) {
-                const otherSocketId = this.chatService.matchSocketId(row._id);
-                if (otherSocketId.length > 2) {
-                  socket.to(otherSocketId).emit(keys.USER_CONNECTED, {
-                    to: row._id,
-                    from: fromId,
-                    message: 'New chat request',
-                    user: row,
-                  });
-                }
+      const socketId = this.chatService.matchSocketId(fromId);
+      if (hasReceiver) {
+        this.sendChatHistory(socket, fromId, toId);
+      } else {
+        const chatList = await this.chatService.getUniqueFromAndToInfo(fromId);
+        this.sendChatData(socket, socketId, keys.CHAT_LIST, {
+          to: toId,
+          data: chatList,
+        });
+        if (chatList.from.length > 0) {
+          chatList.from.forEach((row) => {
+            if (row._id !== toId) {
+              const otherSocketId = this.chatService.matchSocketId(row._id);
+              if (otherSocketId.length > 2) {
+                this.sendChatData(socket, otherSocketId, keys.USER_CONNECTED, {
+                  to: row._id,
+                  from: fromId,
+                  message: 'New chat request',
+                  ...row,
+                });
               }
-            });
-          }
-          /* console.log(keys.CHAT_LIST, chatList); */
+            }
+          });
         }
-      }, 500);
+      }
+    });
+  }
+
+  sendChatData(socket: Socket, toSocketId, eventKey = '', payload: any = null) {
+    const data = new ChatNotification(eventKey, payload);
+    socket.to(toSocketId).emit(keys.CHAT_DATA, data);
+  }
+
+  async sendChatHistory(socket: Socket, fromId = '', toId = '') {
+    const convHistory = await this.chatService.fetchConversation(fromId, toId);
+    const socketId = this.chatService.matchSocketId(fromId);
+    this.sendChatData(socket, socketId, keys.CHAT_HISTORY, {
+      from: fromId,
+      to: toId,
+      data: convHistory,
     });
   }
 
@@ -116,7 +126,9 @@ export class ChatGateway implements NestGateway {
         for (const fromId of fromIds) {
           const toSocketId = this.chatService.matchSocketId(fromId);
           if (notEmptyString(toSocketId, 3)) {
-            socket.to(toSocketId).emit(keys.USER_DISCONNECTED, query.from);
+            this.sendChatData(socket, toSocketId, keys.USER_DISCONNECTED, {
+              from: query.from,
+            });
           }
         }
       });
@@ -129,7 +141,7 @@ export class ChatGateway implements NestGateway {
     await this.chatService.saveChat(chat);
     const toSocketId = this.chatService.matchSocketId(chat.to);
     if (toSocketId.length > 2) {
-      sender.to(toSocketId).emit(keys.CHAT_MESSAGE, chat);
+      this.sendChatData(sender, toSocketId, keys.CHAT_MESSAGE, chat);
     } else {
       const fcm = await this.chatService.sendOfflineChatRequest(
         chat.from,
@@ -137,7 +149,7 @@ export class ChatGateway implements NestGateway {
       );
       if (fcm.valid) {
         const socketId = sender.id;
-        sender.to(socketId).emit('chat_request_sent', {
+        this.sendChatData(sender, socketId, keys.CHAT_REQUEST_SENT, {
           to: chat.to,
           from: chat.from,
           message: `${fcm} has been notified of your chat message`,
@@ -147,14 +159,24 @@ export class ChatGateway implements NestGateway {
   }
 
   @Bind(MessageBody(), ConnectedSocket())
+  @SubscribeMessage(keys.HISTORY_REQUEST)
+  async handleHistoryRequest(toFrom: ToFrom, sender: Socket) {
+    const { from, to } = toFrom;
+    this.sendChatHistory(sender, from, to);
+  }
+
+  @Bind(MessageBody(), ConnectedSocket())
   @SubscribeMessage(keys.INFO_REQUEST)
   async handleInfoRequest(toFrom: ToFrom, sender: Socket) {
     const { to, from } = toFrom;
     const userInfo = await this.chatService.getUserInfo(to);
     ///const toSocketId = this.chatService.matchSocketId(to);
     const fromSocketId = this.chatService.matchSocketId(from);
-    sender.to(fromSocketId).emit(keys.USER_INFO, userInfo);
-    /* console.log(fromSocketId); */
+    this.sendChatData(sender, fromSocketId, keys.USER_INFO, {
+      to,
+      from,
+      ...userInfo,
+    });
   }
 
   @Bind(MessageBody(), ConnectedSocket())
@@ -162,7 +184,10 @@ export class ChatGateway implements NestGateway {
   async handleIsTyping(toFrom: ToFrom, sender: Socket) {
     const { to, from } = toFrom;
     const toSocketId = this.chatService.matchSocketId(to);
-    sender.to(toSocketId).emit(keys.IS_TYPING_RESPONSE, from);
+    this.sendChatData(sender, toSocketId, keys.IS_TYPING_RESPONSE, {
+      to,
+      from,
+    });
   }
 
   @Bind(MessageBody(), ConnectedSocket())
@@ -178,10 +203,10 @@ export class ChatGateway implements NestGateway {
       limitInt,
     );
     const messages = history.messages instanceof Array ? history.messages : [];
-    sender.to(sender.id).emit(keys.CHAT_HISTORY_MORE, {
+    this.sendChatData(sender, sender.id, keys.CHAT_HISTORY_MORE, {
       start: skip,
       limit: limitInt,
-      messages,
+      data: messages,
     });
   }
 }

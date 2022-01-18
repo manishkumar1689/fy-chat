@@ -302,7 +302,6 @@ export class ChatService {
 
   userConnected(userId: string, token: string) {
     this.userMap.set(userId, token);
-    //console.log('All Users', this.userMap.entries());
   }
 
   async userDisconnected(userId: string) {
