@@ -180,17 +180,17 @@ const customTypes = {
 
 export const renderKeyDefinitions = () => {
   const defKeys = Object.keys(keyDefinitions);
-  const socketKeys = Object.entries(keys).map(([k, v]) => {
+  const eventKeys = Object.entries(keys).map(([k, v]) => {
     const definition = defKeys.includes(k)
       ? keyDefinitions[k]
       : { text: v.replace(/_/g, ' ') };
     return {
       key: v,
-      definition,
+      ...definition,
     };
   });
   return {
-    socketKeys,
+    eventKeys,
     customTypes,
   };
 };
