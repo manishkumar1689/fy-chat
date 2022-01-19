@@ -2,6 +2,12 @@ export const port = 3091;
 
 export const socketIoPort = 5551;
 
+export const globalApikey = '7iW_orjLptP';
+
+export const sourcesDirectory = '/var/www/findingyou.co/sources';
+
+export const ipWhitelist = ['0.0.0.0', '127.0.0.1'];
+
 import * as redisStore from 'cache-manager-redis-store';
 
 export const mongo = {

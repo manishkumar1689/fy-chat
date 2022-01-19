@@ -43,6 +43,12 @@ export const uuidToNum = (hex: string): number[] => {
   return parts.map((part) => parseInt(part, 16));
 };
 
+export const uuidTo36 = (hex: string): string => {
+  return uuidToNum(hex)
+    .map((n) => n.toString(36))
+    .join('');
+};
+
 export const uuidPairSort = (hex1: string, hex2: string): string[] => {
   const p1 = uuidToNum(hex1);
   const p2 = uuidToNum(hex2);

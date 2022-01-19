@@ -1,3 +1,5 @@
+import { notEmptyString } from '../lib/helpers';
+
 export class ChatNotification {
   type = 'message';
 
@@ -47,5 +49,32 @@ export class ChatNotification {
         this.data = Object.fromEntries(extraEntries);
       }
     }
+  }
+
+  toObject() {
+    const mp: Map<string, any> = new Map();
+    mp.set('type', this.type);
+    if (notEmptyString(this.to)) {
+      mp.set('to', this.to);
+    }
+    if (notEmptyString(this.from)) {
+      mp.set('from', this.from);
+    }
+    if (notEmptyString(this.message)) {
+      mp.set('message', this.message);
+    }
+    if (typeof this.time === 'number' && this.time > 0) {
+      mp.set('time', this.time);
+    }
+    if (this.data instanceof Object || this.data instanceof Array) {
+      mp.set('data', this.data);
+    }
+    return Object.fromEntries(mp.entries());
+  }
+
+  get isMessage(): boolean {
+    return (
+      ['message', 'chat_message'].includes(this.type) || this.type.length < 2
+    );
   }
 }

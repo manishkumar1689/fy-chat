@@ -1,8 +1,18 @@
-import { Controller, Get, HttpStatus, Param, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Param,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { isValidObjectId } from 'mongoose';
+import { AuthGuard } from 'src/auth/auth.guard';
 import { ChatService } from './chat.service';
+import { isNumeric, smartCastInt } from './lib/helpers';
 import { renderKeyDefinitions } from './settings/keys';
 
+@UseGuards(AuthGuard)
 @Controller()
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
@@ -26,7 +36,7 @@ export class ChatController {
     return res.status(status).json(result);
   }
 
-  @Get('unique-users/:userID')
+  @Get('chat-list/:userID')
   async getUniqueIds(@Res() res, @Param('userID') userID = '') {
     const validId = isValidObjectId(userID);
     const result = validId
@@ -35,16 +45,25 @@ export class ChatController {
     return res.json(result);
   }
 
-  @Get('chat-history/:from/:to')
+  @Get('chat-history/:from/:to/:start?/:limit?')
   async getChatHistory(
     @Res() res,
     @Param('from') from = '',
     @Param('to') to = '',
+    @Param('start') start = '',
+    @Param('limit') limit = '',
   ) {
     const validIds = isValidObjectId(from) && isValidObjectId(to);
     let result: any = { valid: false };
     if (validIds) {
-      result = await this.chatService.fetchConversation(from, to);
+      const startInt = isNumeric(start) ? smartCastInt(start, 0) : 0;
+      const limitInt = isNumeric(limit) ? smartCastInt(limit, 100) : 100;
+      result = await this.chatService.fetchConversation(
+        from,
+        to,
+        startInt,
+        limitInt,
+      );
     }
     return res.json(result);
   }

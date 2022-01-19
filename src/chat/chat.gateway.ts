@@ -28,6 +28,7 @@ const options = {
     credentials: true,
   },
   allowEIO3: true,
+  maxHttpBufferSize: 1e8,
 };
 
 @WebSocketGateway(socketIoPort, options)
@@ -104,7 +105,8 @@ export class ChatGateway implements NestGateway {
 
   sendChatData(socket: Socket, toSocketId, eventKey = '', payload: any = null) {
     const data = new ChatNotification(eventKey, payload);
-    socket.to(toSocketId).emit(keys.CHAT_DATA, data);
+    const r = socket.to(toSocketId).emit(keys.CHAT_DATA, data.toObject());
+    //console.log(eventKey, toSocketId, r, data.toObject());
   }
 
   async sendChatHistory(socket: Socket, fromId = '', toId = '') {
@@ -137,7 +139,58 @@ export class ChatGateway implements NestGateway {
 
   @Bind(MessageBody(), ConnectedSocket())
   @SubscribeMessage(keys.CHAT)
-  async handleNewMessage(chat: Chat, sender: Socket) {
+  async handleChatNotification(inData: any = null, sender: Socket) {
+    if (inData instanceof Object) {
+      const { type } = inData;
+      const eventType = notEmptyString(type, 2) ? type : 'message';
+      const isMessage = ['message', 'chat_message'].includes(eventType);
+      if (isMessage) {
+        const chat = new Chat(inData);
+        this.handleMessage(chat, sender);
+      } else {
+        this.handleDataRequest(inData, sender);
+      }
+    }
+  }
+
+  async handleDataRequest(inData: any = null, sender: Socket) {
+    let socketId = '';
+    let eventType = '';
+    let payload: any = {};
+    switch (inData.type) {
+      default:
+        socketId = this.chatService.matchSocketId(inData.from);
+        break;
+    }
+    switch (inData.type) {
+      case keys.HISTORY_REQUEST:
+        const convHistory = await this.chatService.fetchConversation(
+          inData.from,
+          inData.to,
+        );
+        payload = {
+          from: inData.from,
+          to: inData.to,
+          data: convHistory,
+        };
+        eventType = keys.CHAT_HISTORY;
+        break;
+      case keys.INFO_REQUEST:
+        const userInfo = await this.chatService.getUserInfo(inData.to);
+        payload = {
+          to: inData.to,
+          from: inData.from,
+          ...userInfo,
+        };
+        eventType = keys.USER_INFO;
+        break;
+    }
+    if (notEmptyString(socketId)) {
+      this.sendChatData(sender, socketId, eventType, payload);
+    }
+  }
+
+  async handleMessage(chat: Chat, sender: Socket) {
     await this.chatService.saveChat(chat);
     const toSocketId = this.chatService.matchSocketId(chat.to);
     if (toSocketId.length > 2) {
@@ -170,7 +223,6 @@ export class ChatGateway implements NestGateway {
   async handleInfoRequest(toFrom: ToFrom, sender: Socket) {
     const { to, from } = toFrom;
     const userInfo = await this.chatService.getUserInfo(to);
-    ///const toSocketId = this.chatService.matchSocketId(to);
     const fromSocketId = this.chatService.matchSocketId(from);
     this.sendChatData(sender, fromSocketId, keys.USER_INFO, {
       to,
