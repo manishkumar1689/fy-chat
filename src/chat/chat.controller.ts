@@ -7,7 +7,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { isValidObjectId } from 'mongoose';
-import { AuthGuard } from 'src/auth/auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import { ChatService } from './chat.service';
 import { isNumeric, notEmptyString, smartCastInt } from './lib/helpers';
 import { renderKeyDefinitions } from './settings/keys';
