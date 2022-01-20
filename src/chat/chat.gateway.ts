@@ -193,16 +193,17 @@ export class ChatGateway implements NestGateway {
   async handleMessage(chat: Chat, sender: Socket) {
     const newChat = await this.chatService.saveChat(chat);
     const toSocketId = this.chatService.matchSocketId(chat.to);
-    if (toSocketId.length > 2) {
+    if (toSocketId.length > 2 && newChat.time > 0) {
       this.sendChatData(sender, toSocketId, keys.CHAT_MESSAGE, chat);
-      setTimeout(() => {
+      // send acknowledgement
+      /* setTimeout(() => {
         this.sendChatData(sender, sender.id, keys.MESSAGE_RECEIVED, {
           from: chat.from,
           to: chat.to,
           message: 'received',
           time: newChat.time,
         });
-      }, 250);
+      }, 250); */
     } else {
       const fcm = await this.chatService.sendOfflineChatRequest(
         chat.from,
