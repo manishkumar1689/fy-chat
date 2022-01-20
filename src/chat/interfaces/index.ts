@@ -10,6 +10,7 @@ export interface Message {
 export interface MicroMessage {
   message: string;
   time: number;
+  isFrom?: boolean;
 }
 
 export interface BasicInfo {
@@ -22,6 +23,7 @@ export interface BasicInfo {
   lastMsgTs?: number;
   last?: MicroMessage;
   time?: number;
+  hasReplied: boolean;
 }
 
 export interface ToFrom {

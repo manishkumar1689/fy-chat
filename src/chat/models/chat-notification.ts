@@ -48,6 +48,9 @@ export class ChatNotification {
       if (extraEntries.length > 0) {
         this.data = Object.fromEntries(extraEntries);
       }
+      if (coreEntries.some((entry) => entry[0] === 'message') === false) {
+        this.message = this.type;
+      }
     }
   }
 

@@ -5,7 +5,12 @@ import { InjectModel } from 'nestjs-typegoose';
 import { AxiosResponse } from 'axios';
 import { Chat } from './chat.entity';
 import { fyAPIBaseUri } from '../.config';
-import { BasicInfo, FromToBasicInfo, Message } from './interfaces';
+import {
+  BasicInfo,
+  FromToBasicInfo,
+  Message,
+  MicroMessage,
+} from './interfaces';
 import { notEmptyString } from './lib/helpers';
 
 @Injectable()
@@ -190,30 +195,30 @@ export class ChatService {
     return items;
   }
 
-  async getUniqueFromAndToInfo(userId = ''): Promise<FromToBasicInfo> {
+  async getUniqueInteractions(userId = ''): Promise<BasicInfo[]> {
     const { fromIds, toIds } = await this.getUniqueFromAndTo(userId);
     const ids: string[] = [];
-    const from: any[] = [];
-    const to: any[] = [];
+    const items: BasicInfo[] = [];
     for (const fromId of fromIds) {
       const ui = await this.getUserInfo(fromId);
       ids.push(fromId);
-      if (ui instanceof Object) {
-        const last = await this.fetchLastFromMessage(fromId);
-        from.push({ ...ui, last } as BasicInfo);
+      if (ui instanceof Object && notEmptyString(ui.nickName)) {
+        const last = await this.fetchLastMicroMessage(fromId, userId);
+        items.push({ ...ui, last, hasReplied: true } as BasicInfo);
       }
     }
     for (const toId of toIds) {
       const ui = await this.getUserInfo(toId);
       if (ids.indexOf(toId) < 0) {
         ids.push(toId);
-        if (ui instanceof Object) {
-          const last = await this.fetchLastToMessage(toId);
-          to.push({ ...ui, last } as BasicInfo);
+        if (ui instanceof Object && notEmptyString(ui.nickName)) {
+          const last = await this.fetchLastMessage(toId, userId);
+          items.push({ ...ui, last, hasReplied: false } as BasicInfo);
         }
       }
     }
-    return { from, to };
+    items.sort((a, b) => b.last.time - a.last.time);
+    return items;
   }
 
   async getUniqueFromAndTo(userId = '') {
@@ -249,10 +254,18 @@ export class ChatService {
     };
   }
 
-  async fetchLastFromToMessage(userId = '', mode = 'from'): Promise<Chat> {
+  async fetchLastMessage(fromId = '', toId = ''): Promise<Chat> {
     const filter: Map<string, any> = new Map();
-    if (isValidObjectId(userId)) {
-      filter.set(mode, userId);
+    if (
+      notEmptyString(fromId, 16) &&
+      isValidObjectId(fromId) &&
+      notEmptyString(toId, 16) &&
+      isValidObjectId(toId)
+    ) {
+      filter.set('$or', [
+        { from: fromId, to: toId },
+        { from: toId, to: fromId },
+      ]);
     }
     const msgs = await this.chatModel
       .find(Object.fromEntries(filter.entries()))
@@ -265,8 +278,13 @@ export class ChatService {
       : ({ from: '', to: '', message: '', time: 0 } as Chat);
   }
 
-  async fetchLastFromMessage(userId = ''): Promise<Chat> {
-    return await this.fetchLastFromToMessage(userId, 'from');
+  async fetchLastMicroMessage(fromId = '', toId = ''): Promise<MicroMessage> {
+    const chat = await this.fetchLastMessage(fromId, toId);
+    return {
+      message: chat.message,
+      time: chat.time,
+      isFrom: toId === chat.from,
+    };
   }
 
   async fetchLastFromMessageTs(userId = ''): Promise<number> {
@@ -287,17 +305,13 @@ export class ChatService {
     return ts;
   }
 
-  async fetchLastToMessage(userId = ''): Promise<Chat> {
-    return await this.fetchLastFromToMessage(userId, 'from');
-  }
-
   matchSocketId(userId: string): string {
     return this.userMap.has(userId) ? this.userMap.get(userId) : '';
   }
 
-  async saveChat(chat: Chat): Promise<void> {
+  async saveChat(chat: Chat): Promise<Chat> {
     chat.time = new Date().getTime();
-    await this.chatModel.create(chat);
+    return await this.chatModel.create(chat);
   }
 
   userConnected(userId: string, token: string) {

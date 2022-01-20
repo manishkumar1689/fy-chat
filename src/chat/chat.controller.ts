@@ -9,7 +9,7 @@ import {
 import { isValidObjectId } from 'mongoose';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { ChatService } from './chat.service';
-import { isNumeric, smartCastInt } from './lib/helpers';
+import { isNumeric, notEmptyString, smartCastInt } from './lib/helpers';
 import { renderKeyDefinitions } from './settings/keys';
 
 @UseGuards(AuthGuard)
@@ -38,10 +38,11 @@ export class ChatController {
 
   @Get('chat-list/:userID')
   async getUniqueIds(@Res() res, @Param('userID') userID = '') {
-    const validId = isValidObjectId(userID);
-    const result = validId
-      ? await this.chatService.getUniqueFromAndToInfo(userID)
-      : { valid: false, fromIds: [], toIds: [] };
+    const validId = notEmptyString(userID, 16) && isValidObjectId(userID);
+    let result = [];
+    if (validId) {
+      result = await this.chatService.getUniqueInteractions(userID);
+    }
     return res.json(result);
   }
 
