@@ -31,6 +31,10 @@ export interface ToFrom {
   from: string;
 }
 
+export interface ToFromTime extends ToFrom {
+  time?: number;
+}
+
 export interface ToFromNext {
   to: string;
   from: string;

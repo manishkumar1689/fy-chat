@@ -275,7 +275,7 @@ export class ChatService {
       .limit(1);
     return msgs instanceof Array && msgs.length > 0
       ? msgs[0]
-      : ({ from: '', to: '', message: '', time: 0 } as Chat);
+      : ({ from: '', to: '', message: '', time: 0, read: false } as Chat);
   }
 
   async fetchLastMicroMessage(fromId = '', toId = ''): Promise<MicroMessage> {
@@ -303,6 +303,41 @@ export class ChatService {
       ts = msgs[0].time;
     }
     return ts;
+  }
+
+  async setReadFlag(from = '', to = '', time = 0): Promise<number> {
+    let tsStart = time - 60 * 1000;
+    if (time < 1000) {
+      const lastMsg = await this.fetchLastMicroMessage(to, from);
+      if (lastMsg instanceof Object) {
+        if (lastMsg.time > 1000) {
+          const fiveMinutesMs = 5 * 60 * 1000;
+          tsStart = lastMsg.time - fiveMinutesMs;
+        }
+      }
+    }
+    if (tsStart < 60 * 60 * 1000) {
+      // if otherwise unspecified set 1 week ago
+      const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+      tsStart = new Date().getTime() - oneWeekMs;
+    }
+    const criteria = {
+      from,
+      to,
+      time: {
+        $gte: tsStart,
+      },
+    };
+    const updated = await this.chatModel.updateMany(criteria, {
+      read: true,
+    });
+    let numMarked = 0;
+    if (updated instanceof Object) {
+      if (updated.acknowledged) {
+        numMarked = updated.matchedCount;
+      }
+    }
+    return numMarked;
   }
 
   matchSocketId(userId: string): string {

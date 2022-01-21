@@ -21,6 +21,11 @@ export class Chat {
   })
   time?: number;
 
+  @prop({
+    required: [false, 'added automatically'],
+  })
+  read?: boolean;
+
   constructor(chat?: Partial<Chat>) {
     Object.assign(this, chat);
     this.applyTimestamp();

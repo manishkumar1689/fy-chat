@@ -46,6 +46,31 @@ export class ChatController {
     return res.json(result);
   }
 
+  @Get('set-read/:from/:to/:timeRef?')
+  async setMessageRead(
+    @Res() res,
+    @Param('to') to = '',
+    @Param('from') from = '',
+    @Param('timeRef') timeRef = '',
+  ) {
+    const validId =
+      notEmptyString(to, 16) &&
+      isValidObjectId(to) &&
+      notEmptyString(from, 16) &&
+      isValidObjectId(from);
+    const result: any = { valid: false, numMarkedAsRead: 0 };
+    if (validId) {
+      const time = isNumeric(timeRef) ? smartCastInt(timeRef) : 0;
+      result.valid = true;
+      result.numMarkedAsRead = await this.chatService.setReadFlag(
+        to,
+        from,
+        time,
+      );
+    }
+    return res.json(result);
+  }
+
   @Get('chat-history/:from/:to/:start?/:limit?')
   async getChatHistory(
     @Res() res,

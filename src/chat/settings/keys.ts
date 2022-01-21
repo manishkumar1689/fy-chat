@@ -4,6 +4,7 @@ export const keys = {
   CHAT_MESSAGE: 'chat_message',
   USER_CONNECTED: 'user_connected',
   MESSAGE_RECEIVED: 'message_received',
+  MESSAGE_READ: 'message_read',
   USER_INFO: 'user_info', // server sends user info about the current user if the _id cannot be mapped to another profile
   CHAT_HISTORY: 'chat_history', // sent automatically by the server when starting a new chat
   CHAT_LIST: 'chat_list', // list of users with last message and online status
@@ -54,6 +55,16 @@ export const keyDefinitions = {
       to: `string: [USER_ID]`,
       from: `string: [USER_ID]`,
       time: `int`,
+    },
+  },
+
+  MESSAGES_READ: {
+    mode: 'receive',
+    text: `The client acknowledges message(s) have been read`,
+    payload: {
+      from: `string: [USER_ID] user who sent the message`,
+      to: `string: [USER_ID] user who received message`,
+      time: `int: timestamp since last message read. Otherwise assumed by be 5 minutes before last message`,
     },
   },
   USER_CONNECTED: {

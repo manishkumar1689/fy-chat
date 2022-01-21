@@ -17,7 +17,7 @@ import {
   smartCastInt,
 } from './lib/helpers';
 import { isValidObjectId } from 'mongoose';
-import { ToFrom, ToFromNext } from './interfaces';
+import { ToFrom, ToFromNext, ToFromTime } from './interfaces';
 import { keys } from './settings/keys';
 import { ChatNotification } from './models/chat-notification';
 
@@ -248,6 +248,19 @@ export class ChatGateway implements NestGateway {
     this.sendChatData(sender, toSocketId, keys.IS_TYPING_RESPONSE, {
       to,
       from,
+    });
+  }
+
+  @Bind(MessageBody(), ConnectedSocket())
+  @SubscribeMessage(keys.MESSAGE_READ)
+  async markMessageRead(inData: ToFromTime, sender: Socket) {
+    const { to, from, time } = inData;
+    const numMarkedAsRead = await this.chatService.setReadFlag(from, to, time);
+    this.sendChatData(sender, sender.id, keys.MESSAGE_RECEIVED, {
+      from: to,
+      to: from,
+      message: [numMarkedAsRead, 'marked as read'].join(' '),
+      time,
     });
   }
 
