@@ -5,12 +5,7 @@ import { InjectModel } from 'nestjs-typegoose';
 import { AxiosResponse } from 'axios';
 import { Chat } from './chat.entity';
 import { fyAPIBaseUri } from '../.config';
-import {
-  BasicInfo,
-  FromToBasicInfo,
-  Message,
-  MicroMessage,
-} from './interfaces';
+import { BasicInfo, Message, MicroMessage } from './interfaces';
 import { notEmptyString } from './lib/helpers';
 
 @Injectable()
@@ -187,7 +182,7 @@ export class ChatService {
       filter.set('time', { $gt: fromTs });
       items = await this.chatModel
         .find(Object.fromEntries(filter.entries()))
-        .select('-_id to from message time')
+        .select('-_id to from message time read')
         .sort({ time: -1 })
         .skip(skip)
         .limit(max);
@@ -269,7 +264,7 @@ export class ChatService {
     }
     const msgs = await this.chatModel
       .find(Object.fromEntries(filter.entries()))
-      .select('-_id message time')
+      .select('-_id from to message time read')
       .sort({ time: -1 })
       .skip(0)
       .limit(1);
