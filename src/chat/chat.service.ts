@@ -278,6 +278,7 @@ export class ChatService {
     return {
       message: chat.message,
       time: chat.time,
+      read: chat.read === true,
       isFrom: toId === chat.from,
     };
   }

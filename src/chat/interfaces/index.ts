@@ -11,6 +11,7 @@ export interface MicroMessage {
   message: string;
   time: number;
   isFrom?: boolean;
+  read?: boolean;
 }
 
 export interface BasicInfo {
