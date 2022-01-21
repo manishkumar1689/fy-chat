@@ -1,12 +1,13 @@
 import { Injectable, HttpService } from '@nestjs/common';
 import { ReturnModelType } from '@typegoose/typegoose';
-import { isValidObjectId } from 'mongoose';
+import { isValidObjectId, Model } from 'mongoose';
 import { InjectModel } from 'nestjs-typegoose';
 import { AxiosResponse } from 'axios';
 import { Chat } from './chat.entity';
 import { fyAPIBaseUri } from '../.config';
 import { BasicInfo, Message, MicroMessage } from './interfaces';
 import { notEmptyString } from './lib/helpers';
+import { keys } from './settings/keys';
 
 @Injectable()
 export class ChatService {
@@ -59,6 +60,7 @@ export class ChatService {
       isFrom: fromId === chat.from,
       message: chat.message,
       time: chat.time,
+      read: chat.read === true,
     };
   }
 
@@ -68,6 +70,7 @@ export class ChatService {
       from: chat.from,
       message: chat.message,
       time: chat.time,
+      read: chat.read === true,
     };
   }
 
@@ -114,11 +117,12 @@ export class ChatService {
     for (const item of info) {
       const itemId = item._id.toString();
       const online = this.userMap.has(item._id);
-      const lastMsgTs = await this.fetchLastFromMessageTs(item._id);
+      const { ts, read } = await this.fetchLastFromMessageTsRead(item._id);
       rows.push({
         ...item,
         online,
-        lastMsgTs,
+        lastMsgTs: ts,
+        lastMsgRead: read,
         messages: chats
           .filter((ch) => ch.to === itemId || ch.from === itemId)
           .map((ch) => this.mapMessageItem(ch, userID)),
@@ -131,8 +135,8 @@ export class ChatService {
     const uri = ['user', 'basic-by-id', userID].join('/');
     const info = await this.getResource(uri);
     const online = this.userMap.has(userID);
-    const lastMsgTs = await this.fetchLastFromMessageTs(userID);
-    return { ...info, online, lastMsgTs };
+    const { ts, read } = await this.fetchLastFromMessageTsRead(userID);
+    return { ...info, online, lastMsgTs: ts, lastMsgRead: read };
   }
 
   /* async redisClient(): Promise<Redis.Redis> {
@@ -284,21 +288,32 @@ export class ChatService {
   }
 
   async fetchLastFromMessageTs(userId = ''): Promise<number> {
+    const { ts } = await this.fetchLastFromMessageTsRead(userId);
+    return ts;
+  }
+
+  async fetchLastFromMessageTsRead(
+    userId = '',
+  ): Promise<{ ts: number; read: boolean }> {
     const filter: Map<string, any> = new Map();
     if (isValidObjectId(userId)) {
       filter.set('from', userId);
     }
     const msgs = await this.chatModel
       .find(Object.fromEntries(filter.entries()))
-      .select('-_id time')
+      .select('-_id read time')
       .sort({ time: -1 })
       .skip(0)
       .limit(1);
     let ts = 0;
+    let read = false;
     if (msgs instanceof Array && msgs.length > 0) {
-      ts = msgs[0].time;
+      if (msgs[0] instanceof Model) {
+        ts = msgs[0].time;
+        read = msgs[0].read === true;
+      }
     }
-    return ts;
+    return { ts, read };
   }
 
   async setReadFlag(from = '', to = '', time = 0): Promise<number> {

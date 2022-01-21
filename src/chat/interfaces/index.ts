@@ -5,6 +5,7 @@ export interface Message {
   isFrom?: boolean;
   message: string;
   time: number;
+  read?: boolean;
 }
 
 export interface MicroMessage {
