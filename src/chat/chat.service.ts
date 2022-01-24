@@ -133,7 +133,7 @@ export class ChatService {
     return { rows, valid: rows.length > 0 };
   }
 
-  async getUserInfo(userID = '') {
+  async getUserInfo(userID = ''): Promise<BasicInfo> {
     const uri = ['user', 'basic-by-id', userID].join('/');
     const info = await this.getResource(uri);
     const online = this.userMap.has(userID);

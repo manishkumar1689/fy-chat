@@ -23,6 +23,7 @@ export interface BasicInfo {
   profileImg?: string;
   online?: boolean;
   lastMsgTs?: number;
+  showOnlineStatus?: boolean;
   last?: MicroMessage;
   time?: number;
   hasReplied: boolean;
