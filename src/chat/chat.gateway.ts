@@ -256,7 +256,8 @@ export class ChatGateway implements NestGateway {
   async markMessageRead(inData: ToFromTime, sender: Socket) {
     const { to, from, time } = inData;
     const numMarkedAsRead = await this.chatService.setReadFlag(from, to, time);
-    this.sendChatData(sender, sender.id, keys.MESSAGE_RECEIVED, {
+    const socketId = this.chatService.matchSocketId(from);
+    this.sendChatData(sender, socketId, keys.MESSAGE_RECEIVED, {
       from: to,
       to: from,
       message: [numMarkedAsRead, 'marked as read'].join(' '),

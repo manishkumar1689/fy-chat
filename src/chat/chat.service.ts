@@ -114,19 +114,21 @@ export class ChatService {
         ? await this.postResource('user/basic-by-ids', inData)
         : [];
     const rows = [];
-    for (const item of info) {
-      const itemId = item._id.toString();
-      const online = this.userMap.has(item._id);
-      const { ts, read } = await this.fetchLastFromMessageTsRead(item._id);
-      rows.push({
-        ...item,
-        online,
-        lastMsgTs: ts,
-        lastMsgRead: read,
-        messages: chats
-          .filter((ch) => ch.to === itemId || ch.from === itemId)
-          .map((ch) => this.mapMessageItem(ch, userID)),
-      });
+    if (info instanceof Array) {
+      for (const item of info) {
+        const itemId = item._id.toString();
+        const online = this.userMap.has(item._id);
+        const { ts, read } = await this.fetchLastFromMessageTsRead(item._id);
+        rows.push({
+          ...item,
+          online,
+          lastMsgTs: ts,
+          lastMsgRead: read,
+          messages: chats
+            .filter((ch) => ch.to === itemId || ch.from === itemId)
+            .map((ch) => this.mapMessageItem(ch, userID)),
+        });
+      }
     }
     return { rows, valid: rows.length > 0 };
   }
