@@ -196,6 +196,33 @@ export class ChatService {
     return items;
   }
 
+  async countUnread(
+    fromId = '',
+    toId = '',
+    sinceTs = -1,
+    max = 100,
+  ): Promise<number> {
+    const fromTs =
+      sinceTs > 0 ? new Date().getTime() - 28 * 24 * 60 * 60 * 100 : sinceTs;
+    const filter: Map<string, any> = new Map();
+    const validToId = notEmptyString(toId, 12) && isValidObjectId(toId);
+    const validFromId = notEmptyString(fromId) && isValidObjectId(fromId);
+    let numUnread = 0;
+    if (validFromId && validToId) {
+      filter.set('to', toId);
+      filter.set('from', fromId);
+      filter.set('$or', [{ read: false }, { read: { $exists: false } }]);
+      filter.set('time', { $gte: sinceTs });
+      const countNum = await this.chatModel
+        .count(Object.fromEntries(filter.entries()))
+        .limit(max);
+      if (typeof countNum === 'number') {
+        numUnread = countNum;
+      }
+    }
+    return numUnread;
+  }
+
   async getUniqueInteractions(userId = ''): Promise<BasicInfo[]> {
     const { fromIds, toIds } = await this.getUniqueFromAndTo(userId);
     const ids: string[] = [];
@@ -205,7 +232,8 @@ export class ChatService {
       ids.push(fromId);
       if (ui instanceof Object && notEmptyString(ui.nickName)) {
         const last = await this.fetchLastMicroMessage(fromId, userId);
-        items.push({ ...ui, last, hasReplied: true } as BasicInfo);
+        const numUnread = await this.countUnread(fromId, userId);
+        items.push({ ...ui, last, numUnread, hasReplied: true } as BasicInfo);
       }
     }
     for (const toId of toIds) {

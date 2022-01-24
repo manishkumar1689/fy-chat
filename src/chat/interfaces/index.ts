@@ -24,6 +24,8 @@ export interface BasicInfo {
   online?: boolean;
   lastMsgTs?: number;
   showOnlineStatus?: boolean;
+  hideFromExplore?: boolean;
+  numUnread?: number;
   last?: MicroMessage;
   time?: number;
   hasReplied: boolean;
