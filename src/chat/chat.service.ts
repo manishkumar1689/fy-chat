@@ -6,7 +6,7 @@ import { AxiosResponse } from 'axios';
 import { Chat } from './chat.entity';
 import { fyAPIBaseUri } from '../.config';
 import { BasicInfo, Message, MicroMessage } from './interfaces';
-import { notEmptyString } from './lib/helpers';
+import { notEmptyString, truncateBase64 } from './lib/helpers';
 import { keys } from './settings/keys';
 
 @Injectable()
@@ -399,8 +399,10 @@ export class ChatService {
     return await this.getUniqueFromAndTo(userId);
   }
 
-  async sendOfflineChatRequest(from = '', to = '') {
-    const uri = ['feedback', 'send-chat-request', from, to].join('/');
+  async sendOfflineChatRequest(chat: Chat) {
+    const { from, to, message } = chat;
+    const msgStr = truncateBase64(message);
+    const uri = ['feedback', 'send-chat-request', from, to, msgStr].join('/');
     const result = await this.getResource(uri);
     if (
       result instanceof Object &&

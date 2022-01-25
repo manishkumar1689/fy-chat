@@ -80,3 +80,24 @@ export const extractStringFromArrayOrString = (
 ): string => {
   return str instanceof Array ? (str.length > 0 ? str[0] : '') : str;
 };
+
+export const toBase64 = (str) => Buffer.from(str).toString('base64');
+
+export const fromBase64 = (str) => Buffer.from(str, 'base64').toString('ascii');
+
+export const truncateFirstInit = (str: string, max = 128): string => {
+  const wl = str.length;
+  if (wl > max) {
+    const words = str.split(' ');
+    const lastIndex = words.length - 1;
+    return words
+      .map((w, i) => (i < lastIndex ? w.substring(0, 1) + '.' : w))
+      .join(' ');
+  } else {
+    return str;
+  }
+};
+
+export const truncateBase64 = (str = '', max = 128): string => {
+  return toBase64(truncateFirstInit(str, max));
+};
