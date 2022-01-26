@@ -240,7 +240,7 @@ export class ChatService {
       if (ids.indexOf(toId) < 0) {
         ids.push(toId);
         if (ui instanceof Object && notEmptyString(ui.nickName)) {
-          const last = await this.fetchLastMessage(toId, userId);
+          const last = await this.fetchLastMicroMessage(toId, userId);
           items.push({ ...ui, last, hasReplied: false } as BasicInfo);
         }
       }
