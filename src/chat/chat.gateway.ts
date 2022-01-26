@@ -205,10 +205,7 @@ export class ChatGateway implements NestGateway {
         });
       }, 250); */
     } else {
-      const fcm = await this.chatService.sendOfflineChatRequest(
-        chat.from,
-        chat.to,
-      );
+      const fcm = await this.chatService.sendOfflineChatRequest(chat);
       if (fcm.valid) {
         const socketId = sender.id;
         this.sendChatData(sender, socketId, keys.CHAT_REQUEST_SENT, {

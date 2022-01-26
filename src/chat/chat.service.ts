@@ -7,7 +7,6 @@ import { Chat } from './chat.entity';
 import { fyAPIBaseUri } from '../.config';
 import { BasicInfo, Message, MicroMessage } from './interfaces';
 import { notEmptyString, truncateBase64 } from './lib/helpers';
-import { keys } from './settings/keys';
 
 @Injectable()
 export class ChatService {
@@ -346,9 +345,14 @@ export class ChatService {
     return { ts, read };
   }
 
+  /*
+   * Set time to -1 to mark messages as unread since 5 minutes before last message
+   * Otherwise specify the since timestamp
+   * The zero default will set all messages as unread
+   */
   async setReadFlag(from = '', to = '', time = 0): Promise<number> {
     let tsStart = time - 60 * 1000;
-    if (time < 1000) {
+    if (time < 0) {
       const lastMsg = await this.fetchLastMicroMessage(to, from);
       if (lastMsg instanceof Object) {
         if (lastMsg.time > 1000) {
