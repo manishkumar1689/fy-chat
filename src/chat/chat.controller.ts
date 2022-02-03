@@ -71,6 +71,17 @@ export class ChatController {
     return res.json(result);
   }
 
+  @Get('total-unread/:to')
+  async getTotalUnread(@Res() res, @Param('to') to = '') {
+    const validId = notEmptyString(to, 16) && isValidObjectId(to);
+    const result: any = { valid: false, unread: -1 };
+    if (validId) {
+      result.unread = await this.chatService.getUnreadTotal(to);
+      result.valid = result.unread >= 0;
+    }
+    return res.json(result);
+  }
+
   @Get('chat-history/:from/:to/:start?/:limit?')
   async getChatHistory(
     @Res() res,

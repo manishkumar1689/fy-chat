@@ -385,6 +385,11 @@ export class ChatService {
     return numMarked;
   }
 
+  async getUnreadTotal(userID = '') {
+    const total = await this.chatModel.count({ to: userID, read: false });
+    return typeof total === 'number' ? total : -1;
+  }
+
   matchSocketId(userId: string): string {
     return this.userMap.has(userId) ? this.userMap.get(userId) : '';
   }

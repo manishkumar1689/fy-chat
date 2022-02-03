@@ -17,7 +17,7 @@ import {
   smartCastInt,
 } from './lib/helpers';
 import { isValidObjectId } from 'mongoose';
-import { ToFrom, ToFromNext, ToFromTime } from './interfaces';
+import { ToFrom, ToFromNext, ToFromTime, ToUser } from './interfaces';
 import { keys } from './settings/keys';
 import { ChatNotification } from './models/chat-notification';
 
@@ -105,8 +105,7 @@ export class ChatGateway implements NestGateway {
 
   sendChatData(socket: Socket, toSocketId, eventKey = '', payload: any = null) {
     const data = new ChatNotification(eventKey, payload);
-    const r = socket.to(toSocketId).emit(keys.CHAT_DATA, data.toObject());
-    //console.log(eventKey, toSocketId, r, data.toObject());
+    socket.to(toSocketId).emit(keys.CHAT_DATA, data.toObject());
   }
 
   async sendChatHistory(socket: Socket, fromId = '', toId = '') {
@@ -285,5 +284,13 @@ export class ChatGateway implements NestGateway {
       limit: limitInt,
       data: messages,
     });
+  }
+
+  @Bind(MessageBody(), ConnectedSocket())
+  @SubscribeMessage(keys.MESSAGE_UNREAD_REQUEST)
+  async fetchTotalUnread(toUser: ToUser, sender: Socket) {
+    const { to } = toUser;
+    const data = await this.chatService.getUnreadTotal(to);
+    this.sendChatData(sender, sender.id, keys.MESSAGE_UNREAD_RESPONSE, data);
   }
 }

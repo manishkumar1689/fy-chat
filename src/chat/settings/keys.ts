@@ -5,6 +5,8 @@ export const keys = {
   USER_CONNECTED: 'user_connected',
   MESSAGE_RECEIVED: 'message_received',
   MESSAGE_READ: 'message_read',
+  MESSAGE_UNREAD_REQUEST: 'message_unread_request',
+  MESSAGE_UNREAD_RESPONSE: 'message_unread_response',
   USER_INFO: 'user_info', // server sends user info about the current user if the _id cannot be mapped to another profile
   CHAT_HISTORY: 'chat_history', // sent automatically by the server when starting a new chat
   CHAT_LIST: 'chat_list', // list of users with last message and online status
@@ -65,6 +67,21 @@ export const keyDefinitions = {
       from: `string: [USER_ID] user who sent the message`,
       to: `string: [USER_ID] user who received message`,
       time: `int: timestamp since last message read. Otherwise assumed by be 5 minutes before last message`,
+    },
+  },
+  MESSAGE_UNREAD_REQUEST: {
+    mode: 'receive',
+    text: `The client requests the latest total unread message count for a given user`,
+    payload: {
+      to: `string: [USER_ID] user who received unread messages`,
+    },
+  },
+  MESSAGE_UNREAD_RESPONSE: {
+    mode: 'subevent',
+    text: `server sens updated total unread message count to the user who requested it`,
+    payload: {
+      valid: `boolean`, // false if invalid ID
+      unread: `number`, // -1 if no data is available, 0 is all messages have been read or none received
     },
   },
   USER_CONNECTED: {

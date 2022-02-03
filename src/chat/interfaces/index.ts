@@ -31,6 +31,10 @@ export interface BasicInfo {
   hasReplied: boolean;
 }
 
+export interface ToUser {
+  to: string;
+}
+
 export interface ToFrom {
   to: string;
   from: string;
