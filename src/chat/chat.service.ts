@@ -231,7 +231,7 @@ export class ChatService {
       ids.push(fromId);
       if (ui instanceof Object && notEmptyString(ui.nickName)) {
         const last = await this.fetchLastMicroMessage(fromId, userId);
-        const numUnread = await this.countUnread(userId, fromId);
+        const numUnread = await this.countUnread(fromId, userId);
         items.push({ ...ui, last, numUnread, hasReplied: true } as BasicInfo);
       }
     }
