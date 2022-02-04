@@ -210,8 +210,8 @@ export class ChatService {
     if (validFromId && validToId) {
       filter.set('to', toId);
       filter.set('from', fromId);
-      filter.set('$or', [{ read: false }, { read: { $exists: false } }]);
-      filter.set('time', { $gte: sinceTs });
+      filter.set('read', { read: { $ne: true } });
+      filter.set('time', { $gte: fromTs });
       const countNum = await this.chatModel
         .count(Object.fromEntries(filter.entries()))
         .limit(max);
