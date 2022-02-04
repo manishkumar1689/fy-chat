@@ -210,10 +210,7 @@ export class ChatService {
     if (validFromId && validToId) {
       filter.set('to', toId);
       filter.set('from', fromId);
-      filter.set('$or', [
-        { read: { $exists: false } },
-        { read: { $ne: true } },
-      ]);
+      filter.set('$or', [{ read: false }, { read: { $exists: false } }]);
       filter.set('time', { $gte: fromTs });
       const countNum = await this.chatModel
         .count(Object.fromEntries(filter.entries()))
@@ -389,7 +386,10 @@ export class ChatService {
   }
 
   async getUnreadTotal(userID = '') {
-    const total = await this.chatModel.count({ to: userID, read: false });
+    const total = await this.chatModel.count({
+      to: userID,
+      $or: [{ read: false }, { read: { $exists: false } }],
+    });
     return typeof total === 'number' ? total : -1;
   }
 
