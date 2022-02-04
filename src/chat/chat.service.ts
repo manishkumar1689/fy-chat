@@ -210,7 +210,10 @@ export class ChatService {
     if (validFromId && validToId) {
       filter.set('to', toId);
       filter.set('from', fromId);
-      filter.set('read', { $ne: true });
+      filter.set('$or', [
+        { read: { $exists: false } },
+        { read: { $ne: true } },
+      ]);
       filter.set('time', { $gte: fromTs });
       const countNum = await this.chatModel
         .count(Object.fromEntries(filter.entries()))
