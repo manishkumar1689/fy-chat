@@ -301,7 +301,7 @@ export class ChatGateway implements NestGateway {
       timeInt,
     );
     const socketId = this.chatService.matchSocketId(from);
-    this.sendChatData(sender, socketId, keys.MESSAGE_RECEIVED, {
+    this.sendChatData(sender, socketId, keys.MESSAGE_READ, {
       from: to,
       to: from,
       message: [numMarkedAsRead, 'marked as read'].join(' '),
