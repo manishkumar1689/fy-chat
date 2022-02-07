@@ -20,6 +20,7 @@ import { isValidObjectId } from 'mongoose';
 import { ToFrom, ToFromNext, ToFromTime, ToUser } from './interfaces';
 import { keys } from './settings/keys';
 import { ChatNotification } from './models/chat-notification';
+import { Message } from './interfaces';
 
 const options = {
   cors: {
@@ -139,21 +140,24 @@ export class ChatGateway implements NestGateway {
   @Bind(MessageBody(), ConnectedSocket())
   @SubscribeMessage(keys.CHAT)
   async handleChatNotification(inData: any = null, sender: Socket) {
+    let response = { to: '', from: '', message: '', time: -1 } as Message;
     if (inData instanceof Object) {
       const { type } = inData;
       const eventType = notEmptyString(type, 2) ? type : 'message';
       const isMessage = ['message', 'chat_message'].includes(eventType);
       if (isMessage) {
         const chat = new Chat(inData);
-        this.handleMessage(chat, sender);
+        response = await this.handleMessage(chat, sender);
       } else {
-        this.handleDataRequest(inData, sender);
+        response = await this.handleDataRequest(inData, sender);
       }
     }
+    return response;
   }
 
   async handleDataRequest(inData: any = null, sender: Socket) {
     let socketId = '';
+    const response = { to: '', from: '', message: '', time: -1 } as Message;
     let eventType = '';
     let payload: any = {};
     switch (inData.type) {
@@ -186,22 +190,38 @@ export class ChatGateway implements NestGateway {
     }
     if (notEmptyString(socketId)) {
       this.sendChatData(sender, socketId, eventType, payload);
+      if (inData.from) {
+        response.from = inData.from;
+      }
+      if (inData.to) {
+        response.to = inData.to;
+      }
+      response.message = ['received', eventType].join('_');
+      response.time = new Date().getTime();
     }
+    return response;
   }
 
-  async handleMessage(chat: Chat, sender: Socket) {
-    const newChat = await this.chatService.saveChat(chat);
+  async handleMessage(chat: Chat, sender: Socket): Promise<Message> {
+    this.chatService.saveChat(chat);
     const toSocketId = this.chatService.matchSocketId(chat.to);
-    if (toSocketId.length > 2 && newChat.time > 0) {
+    const time = new Date().getTime();
+    const chatResponse = {
+      from: chat.from,
+      to: chat.to,
+      message: 'received',
+      time,
+    };
+    if (toSocketId.length > 2) {
       this.sendChatData(sender, toSocketId, keys.CHAT_MESSAGE, chat);
       // send acknowledgement
       /* setTimeout(() => {
-        this.sendChatData(sender, sender.id, keys.MESSAGE_RECEIVED, {
-          from: chat.from,
-          to: chat.to,
-          message: 'received',
-          time: newChat.time,
-        });
+        this.sendChatData(
+          sender,
+          sender.id,
+          keys.MESSAGE_RECEIVED,
+          chatResponse,
+        );
       }, 250); */
     } else {
       const fcm = await this.chatService.sendOfflineChatRequest(chat);
@@ -214,6 +234,7 @@ export class ChatGateway implements NestGateway {
         });
       }
     }
+    return chatResponse;
   }
 
   @Bind(MessageBody(), ConnectedSocket())
