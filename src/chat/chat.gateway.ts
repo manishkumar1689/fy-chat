@@ -147,15 +147,30 @@ export class ChatGateway implements NestGateway {
       const isMessage = ['message', 'chat_message'].includes(eventType);
       if (isMessage) {
         const chat = new Chat(inData);
-        response = await this.handleMessage(chat, sender);
+        await this.handleMessage(chat, sender)
+          .then((res) => {
+            response = res;
+          })
+          .catch(() => {
+            response.message = 'error';
+          });
       } else {
-        response = await this.handleDataRequest(inData, sender);
+        await this.handleDataRequest(inData, sender)
+          .then((res) => {
+            response = res;
+          })
+          .catch(() => {
+            response.message = 'error';
+          });
       }
     }
     return response;
   }
 
-  async handleDataRequest(inData: any = null, sender: Socket) {
+  async handleDataRequest(
+    inData: any = null,
+    sender: Socket,
+  ): Promise<Message> {
     let socketId = '';
     const response = { to: '', from: '', message: '', time: -1 } as Message;
     let eventType = '';
@@ -203,7 +218,7 @@ export class ChatGateway implements NestGateway {
   }
 
   async handleMessage(chat: Chat, sender: Socket): Promise<Message> {
-    this.chatService.saveChat(chat);
+    await this.chatService.saveChat(chat);
     const toSocketId = this.chatService.matchSocketId(chat.to);
     const time = new Date().getTime();
     const chatResponse = {
