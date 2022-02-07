@@ -218,14 +218,14 @@ export class ChatGateway implements NestGateway {
   }
 
   async handleMessage(chat: Chat, sender: Socket): Promise<Message> {
-    await this.chatService.saveChat(chat);
+    const newChat = await this.chatService.saveChat(chat);
     const toSocketId = this.chatService.matchSocketId(chat.to);
-    const time = new Date().getTime();
+    //const time = new Date().getTime();
     const chatResponse = {
       from: chat.from,
       to: chat.to,
-      message: 'received',
-      time,
+      message: chat.message,
+      time: newChat.time,
     };
     if (toSocketId.length > 2) {
       this.sendChatData(sender, toSocketId, keys.CHAT_MESSAGE, chat);
