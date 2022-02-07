@@ -172,7 +172,13 @@ export class ChatGateway implements NestGateway {
     sender: Socket,
   ): Promise<Message> {
     let socketId = '';
-    const response = { to: '', from: '', message: '', time: -1 } as Message;
+    const response = {
+      to: '',
+      from: '',
+      type: '',
+      message: '',
+      time: -1,
+    } as Message;
     let eventType = '';
     let payload: any = {};
     switch (inData.type) {
@@ -211,7 +217,7 @@ export class ChatGateway implements NestGateway {
       if (inData.to) {
         response.to = inData.to;
       }
-      response.message = ['received', eventType].join('_');
+      response.type = eventType;
       response.time = new Date().getTime();
     }
     return response;
@@ -225,6 +231,7 @@ export class ChatGateway implements NestGateway {
       from: chat.from,
       to: chat.to,
       message: chat.message,
+      type: keys.MESSAGE_RECEIVED,
       time: newChat.time,
     };
     if (toSocketId.length > 2) {

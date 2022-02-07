@@ -3,6 +3,7 @@ export interface Message {
   to?: string;
   from?: string;
   isFrom?: boolean;
+  type?: string;
   message: string;
   time: number;
   read?: boolean;
