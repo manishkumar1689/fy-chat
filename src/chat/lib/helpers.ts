@@ -83,7 +83,7 @@ export const extractStringFromArrayOrString = (
 
 export const toBase64 = (str) => Buffer.from(str).toString('base64');
 
-export const fromBase64 = (str) => Buffer.from(str, 'base64').toString('ascii');
+export const fromBase64 = (str) => Buffer.from(str, 'base64').toString('utf8');
 
 export const truncateFirstInit = (str: string, max = 128): string => {
   const wl = str.length;
